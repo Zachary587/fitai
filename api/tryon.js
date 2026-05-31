@@ -11,12 +11,10 @@ export default async function handler(req, res) {
 
   const token = process.env.REPLICATE_API_KEY;
   if (!token) {
-    return res.status(500).json({ error: 'Server not configured — REPLICATE_API_KEY missing' });
+    return res.status(500).json({ error: 'REPLICATE_API_KEY environment variable is not set on the server' });
   }
 
   try {
-    // Just CREATE the prediction and return the ID immediately
-    // The frontend will poll /api/poll?id=xxx for the result
     const createRes = await fetch('https://api.replicate.com/v1/predictions', {
       method: 'POST',
       headers: {
@@ -37,17 +35,23 @@ export default async function handler(req, res) {
       })
     });
 
-    const prediction = await createRes.json();
-
-    if (prediction.error) {
-      return res.status(500).json({ error: prediction.error });
+    const raw = await createRes.text();
+    let prediction;
+    try { prediction = JSON.parse(raw); } catch(e) {
+      return res.status(500).json({ error: 'Replicate returned unexpected response: ' + raw.slice(0, 200) });
     }
 
-    // Return just the prediction ID — frontend polls from here
+    if (prediction.error) {
+      return res.status(500).json({ error: 'Replicate error: ' + prediction.error });
+    }
+
+    if (!prediction.id) {
+      return res.status(500).json({ error: 'No ID in Replicate response. Status: ' + createRes.status + ' Body: ' + raw.slice(0, 300) });
+    }
+
     return res.status(200).json({ id: prediction.id, status: prediction.status });
 
   } catch (err) {
-    console.error('Tryon error:', err);
-    return res.status(500).json({ error: err.message || 'Unexpected server error' });
+    return res.status(500).json({ error: 'Fetch failed: ' + err.message });
   }
 }
