@@ -983,13 +983,14 @@ async function runTryOn() {
   var msgs = ['Sending images to AI model...','Queued on GPU...','Diffusion model running...','Compositing garment...','Almost done...'];
   var mi = 0, prog = 0;
   var progIv = setInterval(function() {
-    prog += Math.random() * 4 + 1.5;
+    prog += Math.random() * 3 + 1;
     if (prog > 90) prog = 90;
     fill.style.width = Math.round(prog) + '%';
     if (mi < msgs.length - 1 && prog > (mi+1)*18) { mi++; document.getElementById('loadMsg').textContent = msgs[mi]; }
-  }, 600);
+  }, 800);
 
   try {
+    // Step 1: Create the prediction
     var resp = await fetch('/api/tryon', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1001,11 +1002,33 @@ async function runTryOn() {
       })
     });
     var data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Server error starting prediction');
+    if (!data.id) throw new Error('No prediction ID returned');
+
+    // Step 2: Poll /api/poll until done
+    var predId = data.id;
+    var polls = 0;
+    var result = null;
+    while (polls < 60) {
+      await new Promise(function(r){ setTimeout(r, 3000); });
+      var pollResp = await fetch('/api/poll?id=' + predId);
+      var pollData = await pollResp.json();
+      if (pollData.status === 'succeeded' && pollData.output) {
+        result = Array.isArray(pollData.output) ? pollData.output[0] : pollData.output;
+        break;
+      }
+      if (pollData.status === 'failed') {
+        throw new Error(pollData.error || 'Prediction failed on GPU');
+      }
+      polls++;
+    }
+
     clearInterval(progIv);
     fill.style.width = '100%';
-    if (!resp.ok) throw new Error(data.error || 'Server error');
-    if (!data.output) throw new Error('No output returned. Please try again.');
-    showResult(Array.isArray(data.output) ? data.output[0] : data.output);
+
+    if (!result) throw new Error('Timed out waiting for result. Please try again.');
+    showResult(result);
+
   } catch(err) {
     clearInterval(progIv);
     document.getElementById('loadingState').style.display = 'none';
