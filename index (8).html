@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FitAI — Try On Any Outfit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f9f8f6;
+  --surface:#ffffff;
+  --border:#e8e4de;
+  --text:#111;
+  --muted:#888;
+  --accent:#111;
+  --gold:#b8903a;
+  --radius:10px;
+}
+html{font-size:16px;-webkit-font-smoothing:antialiased}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* NAV */
+nav{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:1.2rem 2rem;border-bottom:1px solid var(--border);
+  background:var(--bg);position:sticky;top:0;z-index:50;
+}
+.logo{font-family:'Instrument Serif',serif;font-size:1.6rem;letter-spacing:-0.02em}
+.logo em{color:var(--gold);font-style:normal}
+.nav-tip{font-size:0.72rem;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase}
+
+/* HERO */
+.hero{text-align:center;padding:3.5rem 1.5rem 2rem}
+.hero h1{font-family:'Instrument Serif',serif;font-size:clamp(2rem,5vw,3.2rem);font-weight:400;line-height:1.15;letter-spacing:-0.02em;margin-bottom:0.75rem}
+.hero h1 em{color:var(--gold);font-style:italic}
+.hero p{font-size:0.92rem;color:var(--muted);max-width:380px;margin:0 auto 2rem;line-height:1.6}
+
+/* PHOTO TIP BANNER */
+.tip-banner{
+  max-width:640px;margin:0 auto 2rem;
+  background:#fffbf2;border:1px solid #f0dfa0;border-radius:var(--radius);
+  padding:0.9rem 1.2rem;display:flex;gap:10px;align-items:flex-start;
+}
+.tip-banner .tip-icon{font-size:1rem;flex-shrink:0;margin-top:2px}
+.tip-banner p{font-size:0.82rem;color:#7a6020;line-height:1.55}
+.tip-banner strong{font-weight:500}
+
+/* UPLOAD SECTION */
+.upload-section{max-width:640px;margin:0 auto;padding:0 1.5rem}
+
+.upload-pair{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+
+.upload-card{
+  border:1.5px dashed var(--border);border-radius:var(--radius);
+  background:var(--surface);cursor:pointer;
+  overflow:hidden;position:relative;
+  aspect-ratio:3/4;transition:border-color .15s;
+  display:flex;flex-direction:column;
+}
+.upload-card:hover{border-color:#bbb}
+.upload-card.filled{border-style:solid;border-color:var(--border)}
+
+.upload-card img{
+  width:100%;height:100%;object-fit:cover;
+  display:none;
+}
+.upload-card.filled img{display:block}
+.upload-card.filled .upload-placeholder{display:none}
+
+.upload-placeholder{
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:8px;padding:1.5rem 1rem;text-align:center;
+}
+.up-icon{
+  width:44px;height:44px;border-radius:50%;
+  background:var(--bg);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-size:1.2rem;
+}
+.up-title{font-size:0.82rem;font-weight:500;color:var(--text)}
+.up-hint{font-size:0.72rem;color:var(--muted);line-height:1.4}
+
+.upload-label{
+  font-size:0.7rem;font-weight:500;color:var(--muted);
+  text-transform:uppercase;letter-spacing:0.08em;
+  padding:8px 12px 0;
+}
+
+.remove-x{
+  position:absolute;top:8px;right:8px;
+  width:26px;height:26px;border-radius:50%;
+  background:rgba(0,0,0,0.55);color:#fff;
+  border:none;cursor:pointer;font-size:0.8rem;
+  display:none;align-items:center;justify-content:center;z-index:5;
+}
+.upload-card.filled .remove-x{display:flex}
+
+/* GARMENT TYPE */
+.gtype-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:1rem}
+.gtype-btn{
+  padding:6px 14px;border:1px solid var(--border);border-radius:99px;
+  font-size:0.78rem;font-family:'Inter',sans-serif;
+  background:var(--surface);color:var(--text);cursor:pointer;transition:all .12s;
+}
+.gtype-btn:hover{border-color:#999}
+.gtype-btn.sel{background:var(--text);color:#fff;border-color:var(--text)}
+
+/* OPTIONAL FIELDS */
+.optional-toggle{
+  font-size:0.78rem;color:var(--muted);cursor:pointer;
+  display:flex;align-items:center;gap:5px;margin-bottom:0.75rem;
+  user-select:none;
+}
+.optional-toggle::before{content:'＋';font-size:0.9rem}
+.optional-toggle.open::before{content:'－'}
+
+.optional-fields{display:none;margin-bottom:1rem}
+.optional-fields.open{display:block}
+
+.fields-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.field-group{display:flex;flex-direction:column;gap:4px}
+.field-group label{font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em}
+.field-group input,.field-group select{
+  font-family:'Inter',sans-serif;font-size:0.85rem;
+  padding:8px 10px;border:1px solid var(--border);border-radius:6px;
+  background:var(--surface);color:var(--text);outline:none;
+  transition:border-color .12s;
+}
+.field-group input:focus,.field-group select:focus{border-color:#aaa}
+.field-full{grid-column:1/-1}
+
+/* GENERATE BUTTON */
+.gen-btn{
+  width:100%;padding:14px;
+  background:var(--text);color:#fff;border:none;border-radius:var(--radius);
+  font-family:'Inter',sans-serif;font-size:0.95rem;font-weight:500;
+  cursor:pointer;letter-spacing:0.02em;transition:opacity .15s;
+  margin-bottom:0.75rem;
+}
+.gen-btn:hover{opacity:0.85}
+.gen-btn:disabled{opacity:0.35;cursor:not-allowed}
+
+.error-msg{
+  font-size:0.82rem;color:#c0392b;background:#fdf0ef;border:1px solid #f5c6c6;
+  border-radius:6px;padding:10px 12px;margin-bottom:0.75rem;display:none;
+}
+.error-msg.show{display:block}
+
+/* LOADING */
+.loading-screen{
+  display:none;flex-direction:column;align-items:center;
+  justify-content:center;padding:4rem 2rem;text-align:center;gap:1.5rem;
+}
+.loading-screen.show{display:flex}
+
+.spin{
+  width:36px;height:36px;border:2px solid var(--border);
+  border-top-color:var(--gold);border-radius:50%;
+  animation:spin .75s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.load-label{font-size:0.88rem;color:var(--muted)}
+.progress-track{width:200px;height:2px;background:var(--border);border-radius:99px;overflow:hidden}
+.progress-fill{height:100%;background:var(--gold);width:0%;transition:width .5s ease;border-radius:99px}
+
+/* RESULT */
+.result-screen{display:none;max-width:640px;margin:0 auto;padding:0 1.5rem 4rem}
+.result-screen.show{display:block}
+
+.result-img-wrap{
+  border-radius:var(--radius);overflow:hidden;
+  border:1px solid var(--border);margin-bottom:1rem;
+  background:var(--surface);min-height:300px;
+  display:flex;align-items:center;justify-content:center;
+}
+.result-img-wrap img{width:100%;height:auto;display:none}
+.result-img-wrap img.loaded{display:block}
+
+.result-actions{display:flex;gap:8px;margin-bottom:1.5rem}
+.btn-outline{
+  flex:1;padding:11px;border:1px solid var(--border);border-radius:var(--radius);
+  background:var(--surface);font-family:'Inter',sans-serif;font-size:0.85rem;
+  cursor:pointer;color:var(--text);transition:all .12s;
+}
+.btn-outline:hover{border-color:#999;background:var(--bg)}
+
+.fit-card{
+  border-radius:var(--radius);padding:1.25rem;margin-bottom:0.75rem;
+}
+.fit-card.good{background:#f2fbf6;border-left:3px solid #2ecc71}
+.fit-card.warn{background:#fffbf0;border-left:3px solid var(--gold)}
+.fit-title{font-family:'Instrument Serif',serif;font-size:1.2rem;margin-bottom:4px}
+.fit-desc{font-size:0.82rem;color:var(--muted);line-height:1.55}
+
+.measures{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:0.75rem}
+.m-cell{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 10px 8px}
+.m-cell-label{font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em}
+.m-cell-val{font-size:0.95rem;font-weight:500;margin-top:2px}
+
+.style-tip{
+  background:#fafaf8;border:1px solid var(--border);border-radius:var(--radius);
+  padding:1rem 1.2rem;
+}
+.style-tip-label{font-size:0.68rem;font-weight:500;color:var(--gold);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px}
+.style-tip p{font-size:0.82rem;color:var(--muted);line-height:1.6}
+
+/* SECTION LABEL */
+.section-label{font-size:0.72rem;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px}
+
+@media(max-width:480px){
+  nav{padding:1rem}
+  .hero{padding:2.5rem 1rem 1.5rem}
+  .upload-section{padding:0 1rem}
+  .result-screen{padding:0 1rem 3rem}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Fit<em>AI</em></div>
+  <div class="nav-tip">AI Virtual Try-On</div>
+</nav>
+
+<div class="hero">
+  <h1>See how it looks<br><em>on you</em></h1>
+  <p>Upload your photo and any clothing item. AI generates a realistic try-on in seconds.</p>
+</div>
+
+<div class="upload-section">
+
+  <!-- Photo tip -->
+  <div class="tip-banner">
+    <div class="tip-icon">💡</div>
+    <p><strong>Best results:</strong> Use a full-body photo standing upright against a plain background. For the garment, use a product photo from any store website.</p>
+  </div>
+
+  <!-- Upload pair -->
+  <div class="upload-pair">
+    <div>
+      <div class="section-label">Your photo</div>
+      <div class="upload-card" id="personZone" onclick="document.getElementById('personInput').click()">
+        <div class="upload-placeholder">
+          <div class="up-icon">🧍</div>
+          <div class="up-title">Upload your photo</div>
+          <div class="up-hint">Full body · Standing · Plain background</div>
+        </div>
+        <img id="personPreview" alt="Your photo">
+        <button class="remove-x" onclick="removeImage(event,'person')" aria-label="Remove">✕</button>
+      </div>
+      <input type="file" id="personInput" accept="image/*" style="display:none">
+    </div>
+    <div>
+      <div class="section-label">Clothing item</div>
+      <div class="upload-card" id="garmentZone" onclick="document.getElementById('garmentInput').click()">
+        <div class="upload-placeholder">
+          <div class="up-icon">👕</div>
+          <div class="up-title">Upload garment</div>
+          <div class="up-hint">Save any product image from a store</div>
+        </div>
+        <img id="garmentPreview" alt="Garment">
+        <button class="remove-x" onclick="removeImage(event,'garment')" aria-label="Remove">✕</button>
+      </div>
+      <input type="file" id="garmentInput" accept="image/*" style="display:none">
+    </div>
+  </div>
+
+  <!-- Garment type -->
+  <div class="section-label">Garment type</div>
+  <div class="gtype-row" id="gtypeRow">
+    <button class="gtype-btn sel" onclick="selCat(this,'upper_body')">Top / shirt</button>
+    <button class="gtype-btn" onclick="selCat(this,'upper_body')">Jacket</button>
+    <button class="gtype-btn" onclick="selCat(this,'lower_body')">Trousers</button>
+    <button class="gtype-btn" onclick="selCat(this,'lower_body')">Jeans</button>
+    <button class="gtype-btn" onclick="selCat(this,'dresses')">Dress</button>
+    <button class="gtype-btn" onclick="selCat(this,'lower_body')">Shorts / skirt</button>
+  </div>
+
+  <!-- Optional fields toggle -->
+  <div class="optional-toggle" id="optToggle" onclick="toggleOptional()">Add measurements for fit analysis</div>
+  <div class="optional-fields" id="optFields">
+    <div class="fields-grid">
+      <div class="field-group">
+        <label>Height</label>
+        <input type="text" id="f_height" placeholder='5\'10" or 178cm'>
+      </div>
+      <div class="field-group">
+        <label>Chest</label>
+        <input type="text" id="f_chest" placeholder="40in or 102cm">
+      </div>
+      <div class="field-group">
+        <label>Waist</label>
+        <input type="text" id="f_waist" placeholder="32in or 81cm">
+      </div>
+      <div class="field-group">
+        <label>Hips</label>
+        <input type="text" id="f_hips" placeholder="38in or 97cm">
+      </div>
+      <div class="field-group field-full">
+        <label>Usual size</label>
+        <select id="f_size">
+          <option value="">Select...</option>
+          <option>XS</option><option>S</option><option>M</option>
+          <option>L</option><option>XL</option><option>XXL</option>
+        </select>
+      </div>
+    </div>
+    <div class="fields-grid">
+      <div class="field-group field-full">
+        <label>Describe the item (optional)</label>
+        <input type="text" id="f_desc" placeholder="e.g. slim-fit navy blazer">
+      </div>
+    </div>
+  </div>
+
+  <div class="error-msg" id="errorMsg"></div>
+  <button class="gen-btn" id="genBtn" onclick="runTryOn()">Generate try-on →</button>
+
+</div>
+
+<!-- LOADING -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="spin"></div>
+  <div class="load-label" id="loadMsg">Sending to AI model...</div>
+  <div class="progress-track"><div class="progress-fill" id="progFill"></div></div>
+  <p style="font-size:0.75rem;color:var(--muted)">Usually takes 20–40 seconds</p>
+</div>
+
+<!-- RESULT -->
+<div class="result-screen" id="resultScreen">
+  <div class="section-label" style="margin-bottom:12px">Your try-on</div>
+  <div class="result-img-wrap">
+    <img id="resultImg" alt="AI try-on result">
+  </div>
+  <div class="result-actions">
+    <button class="btn-outline" onclick="downloadResult()">↓ Download</button>
+    <button class="btn-outline" onclick="resetApp()">Try another →</button>
+  </div>
+  <div class="fit-card good" id="fitCard">
+    <div class="fit-title" id="fitTitle">True to size</div>
+    <div class="fit-desc" id="fitDesc"></div>
+  </div>
+  <div class="measures" id="measuresGrid"></div>
+  <div class="style-tip">
+    <div class="style-tip-label">Styling tip</div>
+    <p id="styleTipText"></p>
+  </div>
+</div>
+
+<script>
+var personB64 = null, garmentB64 = null;
+var selectedCat = 'upper_body';
+var resultImgUrl = null;
+
+// FILE UPLOAD
+function compressImage(file, maxWidth, quality, callback) {
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var scale = Math.min(1, maxWidth / Math.max(img.width, img.height));
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      var dataUrl = canvas.toDataURL('image/jpeg', quality);
+      callback(dataUrl);
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function setupUpload(inputId, zoneId, previewId, key) {
+  document.getElementById(inputId).addEventListener('change', function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    // Compress to max 1024px, 85% quality — keeps file small for API
+    compressImage(file, 1024, 0.85, function(data) {
+      if (key === 'person') personB64 = data.split(',')[1];
+      else garmentB64 = data.split(',')[1];
+      var img = document.getElementById(previewId);
+      img.src = data;
+      document.getElementById(zoneId).classList.add('filled');
+    });
+  });
+}
+setupUpload('personInput','personZone','personPreview','person');
+setupUpload('garmentInput','garmentZone','garmentPreview','garment');
+
+function removeImage(e, key) {
+  e.stopPropagation();
+  if (key === 'person') {
+    personB64 = null;
+    document.getElementById('personPreview').src = '';
+    document.getElementById('personZone').classList.remove('filled');
+    document.getElementById('personInput').value = '';
+  } else {
+    garmentB64 = null;
+    document.getElementById('garmentPreview').src = '';
+    document.getElementById('garmentZone').classList.remove('filled');
+    document.getElementById('garmentInput').value = '';
+  }
+}
+
+function selCat(el, cat) {
+  selectedCat = cat;
+  document.querySelectorAll('.gtype-btn').forEach(function(b){ b.classList.remove('sel'); });
+  el.classList.add('sel');
+}
+
+function toggleOptional() {
+  var toggle = document.getElementById('optToggle');
+  var fields = document.getElementById('optFields');
+  toggle.classList.toggle('open');
+  fields.classList.toggle('open');
+}
+
+function showError(msg) {
+  var el = document.getElementById('errorMsg');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+function clearError() {
+  document.getElementById('errorMsg').classList.remove('show');
+}
+
+function getFitVerdict() {
+  var sizeStr = document.getElementById('f_size').value;
+  var chestStr = document.getElementById('f_chest').value;
+  var chestIn = parseFloat(chestStr);
+  if (!chestStr || isNaN(chestIn)) return { title:'Add measurements', cls:'good', desc:'Enter your measurements above for a fit score.' };
+  var sizeMap = {XS:34,S:36,M:38,L:40,XL:42,XXL:44};
+  var expected = sizeMap[sizeStr] || 38;
+  var diff = chestIn - expected;
+  if (diff > 3) return { title:'Size up recommended', cls:'warn', desc:'Your chest ('+chestIn+'") is larger than typical '+sizeStr+' sizing.' };
+  if (diff < -3) return { title:'Consider sizing down', cls:'warn', desc:'Your chest ('+chestIn+'") is smaller than typical '+sizeStr+' sizing.' };
+  return { title:'True to size', cls:'good', desc:'Your '+sizeStr+' should fit well for this item.' };
+}
+
+function getStylingTip() {
+  var tips = {upper_body:'Try a half-tuck to define the waist and keep a relaxed feel.',lower_body:'Pair with a fitted top tucked in to elongate the leg.',dresses:'A thin belt at the natural waist adds shape to shift cuts.'};
+  return tips[selectedCat] || 'Choose a close-fitting base layer to let this piece stand out.';
+}
+
+async function runTryOn() {
+  clearError();
+  if (!personB64) { showError('Please upload a photo of yourself first.'); return; }
+  if (!garmentB64) { showError('Please upload the garment image.'); return; }
+
+  document.getElementById('genBtn').disabled = true;
+  document.querySelector('.upload-section').style.display = 'none';
+  document.querySelector('.hero').style.display = 'none';
+  document.querySelector('.tip-banner') && (document.querySelector('.tip-banner').style.display = 'none');
+  document.getElementById('loadingScreen').classList.add('show');
+  document.getElementById('resultScreen').classList.remove('show');
+
+  var fill = document.getElementById('progFill');
+  var msgs = ['Sending to AI model...','Queued on GPU...','Diffusion running...','Compositing garment...','Almost done...'];
+  var mi = 0, prog = 0;
+  var progIv = setInterval(function() {
+    prog += Math.random() * 3 + 1;
+    if (prog > 90) prog = 90;
+    fill.style.width = Math.round(prog) + '%';
+    if (mi < msgs.length - 1 && prog > (mi+1)*18) { mi++; document.getElementById('loadMsg').textContent = msgs[mi]; }
+  }, 800);
+
+  try {
+    var resp = await fetch('/api/tryon', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        human_img: personB64,
+        garm_img: garmentB64,
+        garment_des: document.getElementById('f_desc').value || 'clothing item',
+        category: selectedCat
+      })
+    });
+    var data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Server error');
+    if (!data.id) throw new Error('No prediction ID returned: ' + JSON.stringify(data));
+
+    var predId = data.id, polls = 0, result = null;
+    while (polls < 60) {
+      await new Promise(function(r){ setTimeout(r, 3000); });
+      var pr = await fetch('/api/poll?id=' + predId);
+      var pd = await pr.json();
+      if (pd.status === 'succeeded' && pd.output) { result = Array.isArray(pd.output) ? pd.output[0] : pd.output; break; }
+      if (pd.status === 'failed') throw new Error(pd.error || 'Generation failed on GPU');
+      polls++;
+    }
+
+    clearInterval(progIv);
+    fill.style.width = '100%';
+    if (!result) throw new Error('Timed out. Please try again.');
+    showResult(result);
+
+  } catch(err) {
+    clearInterval(progIv);
+    document.getElementById('loadingScreen').classList.remove('show');
+    document.querySelector('.upload-section').style.display = '';
+    document.querySelector('.hero').style.display = '';
+    document.getElementById('genBtn').disabled = false;
+    showError(err.message || String(err));
+  }
+}
+
+function showResult(imgUrl) {
+  resultImgUrl = imgUrl;
+  document.getElementById('loadingScreen').classList.remove('show');
+  document.getElementById('resultScreen').classList.add('show');
+
+  var img = document.getElementById('resultImg');
+  img.onload = function(){ img.classList.add('loaded'); };
+  img.src = imgUrl;
+
+  var v = getFitVerdict();
+  var fc = document.getElementById('fitCard');
+  fc.className = 'fit-card ' + v.cls;
+  document.getElementById('fitTitle').textContent = v.title;
+  document.getElementById('fitDesc').textContent = v.desc;
+
+  var fields = [{l:'Height',id:'f_height'},{l:'Chest',id:'f_chest'},{l:'Waist',id:'f_waist'},{l:'Hips',id:'f_hips'},{l:'Size',id:'f_size'}];
+  document.getElementById('measuresGrid').innerHTML = fields.map(function(f){
+    var val = document.getElementById(f.id).value || '—';
+    return '<div class="m-cell"><div class="m-cell-label">'+f.l+'</div><div class="m-cell-val">'+val+'</div></div>';
+  }).join('');
+
+  document.getElementById('styleTipText').textContent = getStylingTip();
+}
+
+function downloadResult() {
+  if (!resultImgUrl) return;
+  var a = document.createElement('a');
+  a.href = resultImgUrl; a.download = 'fitai-tryon.jpg'; a.target = '_blank'; a.click();
+}
+
+function resetApp() {
+  personB64 = null; garmentB64 = null; resultImgUrl = null;
+  document.getElementById('personPreview').src = '';
+  document.getElementById('garmentPreview').src = '';
+  document.getElementById('personZone').classList.remove('filled');
+  document.getElementById('garmentZone').classList.remove('filled');
+  document.getElementById('personInput').value = '';
+  document.getElementById('garmentInput').value = '';
+  document.getElementById('resultScreen').classList.remove('show');
+  document.getElementById('loadingScreen').classList.remove('show');
+  document.querySelector('.upload-section').style.display = '';
+  document.querySelector('.hero').style.display = '';
+  document.getElementById('genBtn').disabled = false;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+</script>
+</body>
+</html>
